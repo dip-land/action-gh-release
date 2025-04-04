@@ -21,8 +21,8 @@ export interface Release {
     name: string | null;
     body?: string | null | undefined;
     target_commitish: string;
-    draft: boolean | string;
-    prerelease: boolean | string;
+    draft: boolean;
+    prerelease: boolean;
     assets: Array<{ id: number; name: string }>;
 }
 
@@ -35,11 +35,11 @@ export interface Releaser {
         tag_name: string;
         name: string;
         body: string | undefined;
-        draft: boolean | undefined | string;
-        prerelease: boolean | undefined | string;
+        draft: boolean | undefined;
+        prerelease: boolean | undefined;
         target_commitish: string | undefined;
         discussion_category_name: string | undefined;
-        generate_release_notes: boolean | undefined | string;
+        generate_release_notes: boolean | undefined;
         make_latest: 'true' | 'false' | 'legacy' | undefined;
     }): Promise<{ data: Release }>;
 
@@ -51,10 +51,10 @@ export interface Releaser {
         target_commitish: string;
         name: string;
         body: string | undefined;
-        draft: boolean | undefined | string;
-        prerelease: boolean | undefined | string;
+        draft: boolean | undefined;
+        prerelease: boolean | undefined;
         discussion_category_name: string | undefined;
-        generate_release_notes: boolean | undefined | string;
+        generate_release_notes: boolean | undefined;
         make_latest: 'true' | 'false' | 'legacy' | undefined;
     }): Promise<{ data: Release }>;
 
@@ -77,24 +77,18 @@ export class GitHubReleaser implements Releaser {
         tag_name: string;
         name: string;
         body: string | undefined;
-        draft: string | boolean | undefined;
-        prerelease: string | boolean | undefined;
+        draft: boolean | undefined;
+        prerelease: boolean | undefined;
         target_commitish: string | undefined;
         discussion_category_name: string | undefined;
-        generate_release_notes: string | boolean | undefined;
+        generate_release_notes: boolean | undefined;
         make_latest: 'true' | 'false' | 'legacy' | undefined;
     }): Promise<{ data: Release }> {
         if (typeof params.make_latest === 'string' && !['true', 'false', 'legacy'].includes(params.make_latest)) {
             params.make_latest = undefined;
         }
-        if (params.draft === 'True') params.draft = true;
-        if (params.draft === 'False') params.draft = false;
-        if (params.prerelease === 'True') params.prerelease = true;
-        if (params.prerelease === 'False') params.prerelease = false;
-        if (params.generate_release_notes === 'True') params.generate_release_notes = true;
-        if (params.generate_release_notes === 'False') params.generate_release_notes = false;
 
-        return this.github.rest.repos.createRelease(params as any);
+        return this.github.rest.repos.createRelease(params);
     }
 
     updateRelease(params: {
@@ -105,23 +99,17 @@ export class GitHubReleaser implements Releaser {
         target_commitish: string;
         name: string;
         body: string | undefined;
-        draft: boolean | undefined | string;
-        prerelease: boolean | undefined | string;
+        draft: boolean | undefined;
+        prerelease: boolean | undefined;
         discussion_category_name: string | undefined;
-        generate_release_notes: boolean | undefined | string;
+        generate_release_notes: boolean | undefined;
         make_latest: 'true' | 'false' | 'legacy' | undefined;
     }): Promise<{ data: Release }> {
         if (typeof params.make_latest === 'string' && !['true', 'false', 'legacy'].includes(params.make_latest)) {
             params.make_latest = undefined;
         }
-        if (params.draft === 'True') params.draft = true;
-        if (params.draft === 'False') params.draft = false;
-        if (params.prerelease === 'True') params.prerelease = true;
-        if (params.prerelease === 'False') params.prerelease = false;
-        if (params.generate_release_notes === 'True') params.generate_release_notes = true;
-        if (params.generate_release_notes === 'False') params.generate_release_notes = false;
 
-        return this.github.rest.repos.updateRelease(params as any);
+        return this.github.rest.repos.updateRelease(params);
     }
 
     allReleases(params: { owner: string; repo: string }): AsyncIterableIterator<{ data: Release[] }> {
@@ -195,7 +183,8 @@ export const release = async (config: Config, releaser: Releaser, maxRetries: nu
     const tag = config.input_tag_name || (isTag(config.github_ref) ? config.github_ref.replace('refs/tags/', '') : '');
 
     const discussion_category_name = config.input_discussion_category_name;
-    const generate_release_notes = config.input_generate_release_notes;
+    const _generate_release_notes: any = config.input_generate_release_notes;
+    const generate_release_notes = _generate_release_notes === 'True' ? true : _generate_release_notes === 'False' ? false : _generate_release_notes;
     try {
         // you can't get a an existing draft by tag
         // so we must find one in the list of all releases
@@ -247,10 +236,13 @@ export const release = async (config: Config, releaser: Releaser, maxRetries: nu
             body = workflowBody || existingReleaseBody;
         }
 
-        const draft = config.input_draft !== undefined ? config.input_draft : existingRelease.draft;
-        const prerelease = config.input_prerelease !== undefined ? config.input_prerelease : existingRelease.prerelease;
+        const _draft: any = config.input_draft !== undefined ? config.input_draft : existingRelease.draft;
+        const draft = _draft === 'True' ? true : _draft === 'False' ? false : _draft;
+        const _prerelease: any = config.input_prerelease !== undefined ? config.input_prerelease : existingRelease.prerelease;
+        const prerelease = _prerelease === 'True' ? true : _prerelease === 'False' ? false : _prerelease;
 
-        const make_latest = config.input_make_latest;
+        const _make_latest: any = config.input_make_latest;
+        const make_latest = _make_latest === 'True' ? true : _make_latest === 'False' ? false : _make_latest;
 
         const release = await releaser.updateRelease({
             owner,
